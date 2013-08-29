@@ -40,7 +40,7 @@ htmlSelectID    = "nameLocPairLocationA";
 htmlBaseVal = "<select id='" + htmlSelectID + "'>";
 options     = "";
 index       = 0;
-print       "Value of HTML:" + html;
+print       "Value of HTML:" + htmlBaseVal;
 //
 // Step through all the SFDC Locations Passed in and build the options string
 //
@@ -48,8 +48,8 @@ for row in ctlServiceLocationAddressArrAtt {
 
     // Build the Value Parameters string.   These value parameters will be populate the real Attributes in the JavaScript:
     // Format: "value1!$!value2"
-    valueParams = ctlServiceLocationIDArrAtt[index] + "!$! + row; 
-    options = options + "<option id=\"htmlSelectID" + string(index) + "\" value=\"" + valueParams + "\">" + row + "</option>";
+    valueParams = ctlServiceLocationIDArrAtt[index] + "!$!" + row; 
+    options = options + "<option id=\"" + htmlSelectID + string(index) + "\" value=\"" + valueParams + "\">" + row + "</option>";
     index = index + 1;
 }
 htmlBaseVal = htmlBaseVal + options + "</select>";
@@ -63,6 +63,6 @@ htmlBaseVal = htmlBaseVal + options + "</select>";
 // retValue[index] =  "!$!SELECT_BEGIN!$! id=\"plsALocationHTMLArrAtt" + string(index) + "\">" +  baseValue;
 // index  = index + 1;
 //}
-reValue = htmlBaseVal;
+retValue = htmlBaseVal;
 
 return retValue;
