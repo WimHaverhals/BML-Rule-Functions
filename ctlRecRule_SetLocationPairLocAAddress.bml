@@ -1,0 +1,68 @@
+//************************************************************************************************************
+//** Rule Name....: ctlRecRule_SetLocationPairLocAAddress                                                   **
+//** Rule Type....: Recommendation Rule                                                                     **
+//**                                                                                                        **
+//** Parameters...: ctlLocationPairLocAHTML   (Set)                                                         **
+//**                ctlLocationPairLocAString (Function)                                                    **
+//**                                                                                                        **
+//** Description..: This code snippet reads the selected SFDC Locations on the Opportunity and  builds a    **
+//**                string that gets interpreted by a JavaScript function to render an HTML drop down       **
+//**                with list of all the available addresses.   As this is HTML the actual user selection   **
+//**                cannot be populated to the real BM attributes without the help of javascript            **
+//**                We need javascript in conjunction to the below code so that the functionality works     **
+//**                correctly.  Javascript is present in config.js file (latest version, as it is versioned **
+//**                by date) under the function assignALocation()                                           **
+//**                                                                                                        **
+//**                                                                                                        **
+//** History......: Date        Author      Comment                                                         **
+//**                08/26/13    Wim H.      Initial Implementation                                          **
+//**                                                                                                        **
+//************************************************************************************************************
+
+// Initialize all the variables with context-specific ones
+htmlSelectID    = "nameLocPairLocationA";
+
+// Dummy options provided below for testing purposes
+// Example:     <select id='nameLocationA'>
+//                    <option id="address1" value="Select!$!TECH_DESC!$!COUNTRY!$!NAME">Select</option>
+//                    <option id="address2" value="AAAAAA!$!TECH_DESC!$!COUNTRY!$!NAME">AAAAAA</option>
+//                    <option id="address3" value="BBBBBB!$!TECH_DESC!$!COUNTRY!$!NAME">BBBBBB</option>
+//                    <option id="address4" value="CCCCCC!$!TECH_DESC!$!COUNTRY!$!NAME">CCCCCC</option>
+//                    <option id="address5" value="DDDDDD!$!TECH_DESC!$!COUNTRY!$!NAME">DDDDDD</option>
+//                    <option id="address6" value="EEEEEE!$!TECH_DESC!$!COUNTRY!$!NAME">EEEEEE</option>
+//                </select>
+// html = html + "<option id=\"address" + string(index) + "\" value=\"" + allOptions + "\">" + address + "</option>";
+// End Dummy Options
+
+// Keep the code below this comment as generic as possible.   All the context-specific variables are provide above
+
+// Start encoding the html select String as well as the options string   
+htmlBaseVal = "<select id='" + htmlSelectID + "'>";
+options     = "";
+index       = 0;
+print       "Value of HTML:" + html;
+//
+// Step through all the SFDC Locations Passed in and build the options string
+//
+for row in ctlServiceLocationAddressArrAtt {
+
+    // Build the Value Parameters string.   These value parameters will be populate the real Attributes in the JavaScript:
+    // Format: "value1!$!value2"
+    valueParams = ctlServiceLocationIDArrAtt[index] + "!$! + row; 
+    options = options + "<option id=\"htmlSelectID" + string(index) + "\" value=\"" + valueParams + "\">" + row + "</option>";
+    index = index + 1;
+}
+htmlBaseVal = htmlBaseVal + options + "</select>";
+
+
+//retValue = String[1];
+//index = 0;
+//rowRange =  range(ctlNumberOfLocationPairs);
+//for row in rowRange {
+// retValue[index] = baseValue;
+// retValue[index] =  "!$!SELECT_BEGIN!$! id=\"plsALocationHTMLArrAtt" + string(index) + "\">" +  baseValue;
+// index  = index + 1;
+//}
+reValue = htmlBaseVal;
+
+return retValue;
