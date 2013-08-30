@@ -1,9 +1,9 @@
 //************************************************************************************************************
-//** Rule Name....: ctlRecRule_SetLocationPairLocAAddress                                                   **
+//** Rule Name....: ctlRecRule_SetLocationPairLocZAddress                                                   **
 //** Rule Type....: Recommendation Rule                                                                     **
 //**                                                                                                        **
-//** Parameters...: ctlLocationPairLocAHTML   (Set)                                                         **
-//**                ctlLocationPairLocAString (Function)                                                    **
+//** Parameters...: ctlLocationPairLocZHTML   (Set)                                                         **
+//**                ctlLocationPairLocZString (Function)                                                    **
 //**                                                                                                        **
 //** Description..: This code snippet reads the selected SFDC Locations on the Opportunity and  builds a    **
 //**                string that gets interpreted by a JavaScript function to render an HTML drop down       **
@@ -11,25 +11,25 @@
 //**                cannot be populated to the real BM attributes without the help of javascript            **
 //**                We need javascript in conjunction to the below code so that the functionality works     **
 //**                correctly.  Javascript is present in config.js file (latest version, as it is versioned **
-//**                by date) under the function assignALocation()                                           **
+//**                by date) under the function assignZLocation()                                           **
 //**                                                                                                        **
 //**                                                                                                        **
 //** History......: Date        Author      Comment                                                         **
-//**                08/26/13    Wim H.      Initial Implementation                                          **
+//**                08/26/13    Wim H.      Initial Implementation & upd                                    **
 //**                                                                                                        **
 //************************************************************************************************************
 
 //
 // Initialize all the variables with context-specific ones
 //
-htmlSelectID    = "nameLocPairLocationA";	// Sets the name space for the HTML select control
+htmlSelectID    = "nameLocPairLocationZ";	// Sets the name space for the HTML select control
 showNoneSel	= true;				// Set showNoneSel to true if you want to show a none-selected option, otherwise false
-selectNoneLabel = "Select A Location...";	// Populate this value with the None-Selected Text
+selectNoneLabel = "Select Z Location...";	// Populate this value with the None-Selected Text
 
 
 // ADD MORE COMMENTS HERE EXPLAINING HOW TO USE and RE-USE
 // Dummy options provided below for testing purposes
-// Example:     <select id='nameLocationA'>
+// Example:     <select id='nameLocationZ'>
 //                    <option id="address1" value="Select!$!TECH_DESC!$!COUNTRY!$!NAME">Select</option>
 //                    <option id="address2" value="AAAAAA!$!TECH_DESC!$!COUNTRY!$!NAME">AAAAAA</option>
 //                    <option id="address3" value="BBBBBB!$!TECH_DESC!$!COUNTRY!$!NAME">BBBBBB</option>
@@ -90,7 +90,7 @@ htmlBaseVal = htmlBaseVal + options + "</select>";
 
 
 //
-// Show a recommendation message until the user selects an A Location.   
+// Show a recommendation message until the user selects a Z Location.   
 // If no locations where found then report an error. 
 //
 recMessageStart    	= "<p class=\"message recommendation-message\">";
@@ -102,8 +102,8 @@ message = "";
 if (not serviceLocationsFound) {
     message = constraintMsgStart + "*** NO SFDC LOCATIONS ASSOCIATED ***" + constraintMsgEnd;
 }
-elif (ctlLocationPairLocASFDCIDString == "") {
-    message = recMessageStart + "Please select A Location..." + recMessageEnd;
+elif (ctlLocationPairLocZSFDCIDString == "") {
+    message = recMessageStart + "Please select Z Location..." + recMessageEnd;
 }
 retValue = htmlBaseVal + message;
 return retValue;
