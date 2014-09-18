@@ -1,0 +1,283 @@
+//*****************************************************************************************************
+//** Function:    Add HVoIP Seat and Addon Parts                                       
+//** Type:        Rec Item Rule
+//**  
+//** Description: Gets the specified part dependent on config criteria.
+//**                 
+//** Parameters:  recItem: selAddressDelimitedStringArrAtt - this string holds the address' data delimited 
+//**                                                         "*"
+//**              ctlConfigurationStatusStorageArrAtt - This STORAGE Attribute has rows that align with the 
+//**                                                    with the Address Selection Array.   A row that has a 
+//**                                                    status of COMPLETE is ready to be submitted to the 
+//**                                                    recommended items.
+//**              voIPPhoneSeatSelectionControlAttrStorageArrAtt
+//**              voIPSeatSelectionStorageArrAtt
+//**              voIPPhoneSelectionStorageArrAtt
+//**              voIPSeatQuantityStorageArrAtt
+//** 
+//**              selAddressArrAtt - Selection Array Attribute that holds the Address String
+//**              hvpSeatBandMax   - This is the single-select value that holds the seat band value that neeeds to 
+//**                                 be submitted to  the ESL layer.
+//**              hvpDiscountLevel - 
+//**
+//**              Various attributes will need to be modified on a per-rule basis as commented below.
+//**		  These fields include:
+//**              part
+//**		  orderSuffix
+//**		  appending to attributes array
+//**		  appending to attrValues array (within config array loop)
+//**		  putting data into partInfoDict dictionary
+//**		  assigning conditions to recommend the part via if statement (within config array loop)
+//**                                                                                            
+//** History:     Date          Author          Comment        
+//**              09-Sep-2014   Brian Barnhart  Initial Creation
+//**
+//** NOTES ON ITEM PART ORDERING
+//** 		A mumber Floating Point Numeric (1.000, 1.001) that specifies how the 
+//**              part relates to other parts and controls sorting within Model within Commerce. 
+//**             All parts with the same leading number represent the same sold service (Top Product plus addons)
+//**              Top Level products should end with .000
+//**              First Top Level Product for model should be 1.000. Second 2.000, etc.
+//**              Addons share their parents integer number to ensure they stay together and then have a non .000 extension.
+//**              Addons will be sorted within Commerce based on their suffix. .001 will sort before .002. 
+//**		Addons with the same extension will sort alphabetically.
+//**
+//**		FOR CTL ADDONS: 
+//**		All Local Loop Addons will be given the number .010-.099
+//**		All Port addons have .110-.199
+//**		All Complimentary Services have .210-.299
+//** Design Notes:
+//**
+//**     This Rec Item Rule will pull all storage rows that have a status of COMPLETE
+//**                 
+//************************************************************************************************************
+//
+// Initialize Constants
+//
+indent = "!$!INDENT!$!";
+newline = "!$!NEWLINE!$!";
+
+nextPartDelimiter           = "|^|";
+parentOuterDelim            = "!=!";
+parentInnerDelim            = "!-!";
+uniquePartIdentifierCounter = 1000; //add 1000 to this value for each unique part per row.
+pairDelim                   = "!*!";
+
+//
+// Leave the initialization of the dictionaries in place in case we are not getting the right values from the 
+// table
+//
+seatDescDict   = dict("string");
+phoneDescDict  = dict("string");
+
+put(seatDescDict,"BASIC",          "Basic Seat"   );
+put(seatDescDict,"STANDARD",       "Standard Seat");
+put(seatDescDict,"PREMIUM",        "Premium Seat" );
+put(seatDescDict,"RECEPTIONIST",   "Receptionist");
+put(seatDescDict,"CONFERENCE ROOM","Conference Room");
+put(seatDescDict,"VIRTUAL",        "Virtual Seat");
+put(seatDescDict,"ADMIN",          "Admin Seat");
+put(seatDescDict,"ANALOG",         "Analog Seat");
+//print seatDescDict;
+//
+// Read the SeatType and PhoneType Descriptions from the seat2Phone Table and load their dictionaries
+//
+recordSet = bmql("SELECT DISTINCT SeatType, SeatTypeDesc FROM ctlSeat2Phone");
+for record in recordSet {
+
+    put(seatDescDict, get(record,"SeatType"),get("SeatTypeDesc") );
+
+}
+
+recordSet = bmql("SELECT DISTINCT PhoneType, PhoneTypeDesc FROM ctlSeat2Phone");
+for record in recordSet {
+
+    put(phoneDescDict, get(record,"PhoneType"),get("PhoneTypeDesc") );
+
+}
+print "====================";
+print seatDescDict;
+print "^^^^^^^^^^^^^^^^^^^^";
+print phoneDescDict;
+print "====================";
+//
+// Initialize Working Variables
+//
+addressRowIndex = -1;
+index           = 0;
+recItems        = "";
+address         = "";
+//
+// This code will pull the stored COMPLETE values from the storage arrays and 
+// generate a recItem String out of it.   The thought is that this rule would 
+// only run when Configuration In Progress is set to false, but we will have to 
+// evaluate different scenarios.
+// Step through the Selection Array and evaluate which items can be added.
+//
+
+partList        = recordset();
+orderSuffix     = "";
+orderNum        = "";
+seatPimPartID   = 2057;
+seatPartNum     = "";
+
+//
+// Step through the STATUS array and perform logic on the COMPLETE ones
+//
+for addressRowStatus in ctlConfigurationStatusStorageArrAtt  {
+
+    addressRowIndex = addressRowIndex + 1;  // Keep track of the index for other 
+                                          // Address-aligned Array Attributes
+    //
+    // Only process the rows that have a complete status
+    //
+    //if ( ( find(upper(addressRowStatus),"COMPLETE") <> -1) OR isnull(addressRowStatus) ){ //{continue;}
+    if(addressRowStatus  == "COMPLETE" OR isnull(addressRowStatus) ){
+		
+    //*********** BEGIN SEAT LOGIC HERE *************
+    //
+    // Read the part information.   Only needs to be done once
+    //
+    if ((seatPartNum == "") OR (isnull(seatPartNum))) {
+        //
+        // As soon as we've read this record we do not have to run the query
+        // again. 
+        //
+        seatPartNum     = "VOIP Seat";
+        partList = bmql("SELECT part_number FROM _parts WHERE custom_field5 = $seatPimPartID");
+        for part in partList {
+	    seatPartNum = get(part, "part_number");
+        }
+    }
+    //
+    // Set order number, will be used to keep line item order in commerce.   
+    //
+    orderSuffix = util.ctlGetPartSequenceNumber(seatPartNum, _bm_model_variable_name);
+    orderNum    = "00" + string(index+1);
+    if( (index+1) >= 100) { 
+        orderNum = string(index + 1);
+    } elif ( (index+1) >= 10) { 
+        orderNum = "0" + string(index + 1);
+    }
+    //
+    // Not sure if the selAddressDelimitedStringArrAtt will be set.   If not 
+    // we can obtain it from the Address Selection Array. 
+    //  
+    addressRowDelimitedString = selAddressDelimitedStringArrAtt[addressRowIndex];
+    // This line was here in case delimited string not set:
+    //streetAddress2 = selAddressArrAtt[addressRowIndex];   // just in case the other does not work
+    //
+    // Set Address Info
+    //
+    aAddrInfoSplit = split(addressRowDelimitedString, pairDelim);
+
+    streetAddr     = aAddrInfoSplit[1] + "; " + aAddrInfoSplit[2]; //Street Address; City, State
+    //
+    // Now begin work on the seats.   We've already made sure that the status is COMPLETE 
+    // on the current row.   The seats can be 1-n rows so set up arrays
+    //
+    seatTypes          = string[];
+    phoneTypes         = string[];
+    seatQuantities     = string[];
+    seatBand           = hvpSeatBandMax;
+    seatQuantitiesInt  = integer[];
+    prettyDesc         = "";
+    partInfoDict       = dict("string");
+    techDescAttributes = String[];
+    techDescValues     = String[];
+    //			
+    //CRM Extra Info values
+    //
+    put(partInfoDict, "prevMRC", string(ctlPreviousMRC));
+    put(partInfoDict, "ctlProductType", ctlproductType);
+    put(partInfoDict, "crmProductName", crmProductId);
+    put(partInfoDict, "crmProductId", crmProductId);
+    //
+    // CommerceExtraInfo
+    // Capture SeatTypes, PhoneTypes and SeatQuantities   - voIPPhoneSeatSelectionControlAttrStorageArrAtt
+    //
+    seatTypes      = split(voIPSeatSelectionStorageArrAtt[addressRowIndex],pairDelim);
+    phoneTypes     = split(voIPPhoneSelectionStorageArrAtt[addressRowIndex],pairDelim);
+    seatQuantities = split(voIPSeatQuantityStorageArrAtt[addressRowIndex],pairDelim);
+    //
+    // Now set the Integer Seat Quantities
+    //
+    for seatQuantity in seatQuantities {
+
+        append(seatQuantitiesInt, atoi(seatQuantity));
+
+    }
+    //
+    // Write the SEAT / PHONE and QUANTITY INFORMATION to the dictionary.   We need to create a 
+    // unique key for each 
+    // 
+    seatrowIndex = -1;
+    for seatType in seatTypes {
+        //
+        // Note to Brian : Not sure if this is right, but assume you want to start a new 
+        // description for each Seat Type Found for the Address	
+        //		
+        prettyDesc         = "";
+        techDescAttributes = String[];
+        techDescValues     = String[];
+
+        seatrowIndex = seatrowIndex  + 1;
+        phoneType    = phoneTypes[seatRowIndex];
+        seatQuantity = seatQuantities[seatRowIndex];
+        
+        if( (seatQuantity) == "0" OR (seatQuantity == "") OR isnull(seatQuantity)){continue;}
+        //
+        // Construct a unique key value for the partInfoDict Dictionary
+        // Note to Brian : I assume that you want to have one recommended item for each 
+        // seat type found on the location.   In that case we want to re-initialize the dictonary 
+        // on every pass of the loop. 
+        //
+	put(partInfoDict, "HVOIPSeatType", get(seatDescDict,seatType));
+	put(partInfoDict, "HVOIPPhoneType", PhoneType);
+	put(partInfoDict, "HVOIPSeatQty", seatQuantity);
+	put(partInfoDict, "partQty", seatQuantity);
+        //
+        // Now build Tech Description
+        // 
+	append(techDescAttributes, "ServiceCategoryCode");	
+	append(techDescValues, ctlServiceCategoryCode);
+
+	append(techDescAttributes, "SEAT_TYPE");
+	append(techDescValues, seatType);
+
+	append(techDescAttributes, "PHONE_TYP");
+	append(techDescValues, phoneType);
+
+	append(techDescAttributes, "SEAT_QTY");
+	append(techDescValues, seatQuantity);
+
+	append(techDescAttributes, "DISC_LEVEL");
+	append(techDescValues, hvpDiscountLevel);
+
+	append(techDescAttributes, "MS_TR_ST_QTY");
+	append(techDescValues, seatBand);
+
+	//print techDescValues;
+        //
+        // Assemble Pretty Description
+        //
+	prettyDesc = indent + "Seat Type: " + get(seatDescDict,seatType) + "- " + phoneType + newline 
+                   + indent + "Total Seats: "     + seatQuantity + newline 
+                   + indent + "Discount Level: " + hvpDiscountLevel;
+
+        put(partInfoDict, "prettyDesc", prettyDesc);
+
+        put (partInfoDict, "aAddressInfo", util.encodeAddressInfo(streetAddr, "locationID=" + ctlServiceLocationIDArrAtt[index], 
+             aAddrInfoSplit[3], aAddrInfoSplit[0]));
+        recItems = recItems 
+                   + replace(util.getRecommendedItemsReturnString2(seatPartNum, orderNum + orderSuffix, techDescAttributes, 
+                             techDescValues, "", 0, false, "", "USA", partInfoDict), "|^|", "~" + string(uniquePartIdentifierCounter + index) + "|^|");
+	uniquePartIdentifierCounter = uniquePartIdentifierCounter + 1000;
+
+    } //End for loop through seatTypes		
+
+      index = index + 1;
+  }
+} // End looping through all of the Address Values
+
+return recItems;
